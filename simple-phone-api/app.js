@@ -30,31 +30,41 @@ let messages = [
   { id: 10, sender: 'Ava Turner', recipient: 'James Rodriguez', content: 'No, I haven\'t. I need to watch it soon!' }
 ];
 
+// Sample favorites data
+let favorites = [
+  { contactId: 1, name: 'John Doe' },
+  { contactId: 3, name: 'Michael Johnson' },
+  { contactId: 7, name: 'William Clark' }
+];
+
+const { v4: uuidv4 } = require('uuid');
+
+function generateUniqueId() {
+  return uuidv4();
+}
+
 // Route handler for the root path ("/")
 app.get('/', (req, res) => {
   res.send('Welcome to Simple Phone App!');
-});
-
-// GET all contacts
-app.get('/contacts', (req, res) => {
-  res.json({ contacts });
-});
-
-// GET a specific contact
-app.get('/contacts/:id', (req, res) => {
-  const contactId = parseInt(req.params.id);
-  const contact = contacts.find(contact => contact.id === contactId);
-  if (contact) {
-    res.json({ contact });
-  } else {
-    res.status(404).json({ message: 'Contact not found' });
-  }
 });
 
 // GET all messages
 app.get('/messages', (req, res) => {
   res.json({ messages });
 });
+
+// GET a single message
+app.get('/messages/:id', (req, res) => {
+  const messageId = parseInt(req.params.id);
+  const message = messages.find((msg) => msg.id === messageId);
+
+  if (message) {
+    res.json({ message });
+  } else {
+    res.status(404).json({ message: 'Message not found' });
+  }
+});
+
 
 // GET all messages sent by a specific user
 app.get('/messages/sender/:name', (req, res) => {
@@ -78,6 +88,21 @@ app.get('/messages/recipient/:name', (req, res) => {
   }
 });
 
+// POST a new message
+app.post('/messages', (req, res) => {
+  const { sender, recipient, message } = req.body;
+  const newMessage = {
+    id: generateUniqueId(), // Assuming you have a function to generate unique IDs
+    sender,
+    recipient,
+    message
+  };
+
+  messages.push(newMessage);
+
+  res.status(201).json({ message: 'Message created successfully', newMessage });
+});
+
 // POST a message to a user
 app.post('/contacts/:id/messages', (req, res) => {
   const contactId = parseInt(req.params.id);
@@ -86,6 +111,24 @@ app.post('/contacts/:id/messages', (req, res) => {
   if (contactIndex !== -1) {
     contacts[contactIndex].messages.push(message);
     res.json({ message: 'Message sent successfully' });
+  } else {
+    res.status(404).json({ message: 'Contact not found' });
+  }
+});
+
+//==========================CONTACTS============================//
+
+// GET all contacts
+app.get('/contacts', (req, res) => {
+  res.json({ contacts });
+});
+
+// GET a specific contact
+app.get('/contacts/:id', (req, res) => {
+  const contactId = parseInt(req.params.id);
+  const contact = contacts.find(contact => contact.id === contactId);
+  if (contact) {
+    res.json({ contact });
   } else {
     res.status(404).json({ message: 'Contact not found' });
   }
@@ -131,6 +174,23 @@ app.patch('/contacts/:id', (req, res) => {
   }
 });
 
+// DELETE a message
+app.delete('/messages/:id', (req, res) => {
+  const messageId = parseInt(req.params.id);
+  
+  // Find the index of the message with the given ID
+  const messageIndex = messages.findIndex(message => message.id === messageId);
+  
+  if (messageIndex !== -1) {
+    // Remove the message from the messages array
+    messages.splice(messageIndex, 1);
+    res.json({ message: 'Message deleted successfully' });
+  } else {
+    res.status(404).json({ message: 'Message not found' });
+  }
+});
+
+
 // DELETE a contact
 app.delete('/contacts/:id', (req, res) => {
   const contactId = parseInt(req.params.id);
@@ -140,6 +200,88 @@ app.delete('/contacts/:id', (req, res) => {
     res.json({ message: 'Contact deleted successfully' });
   } else {
     res.status(404).json({ message: 'Contact not found' });
+  }
+});
+
+//==========================FAVORITES============================//
+
+// GET favorites
+app.get('/favorites', (req, res) => {
+  res.json(favorites);
+});
+
+// GET favorite by ID
+app.get('/favorites/:contactId', (req, res) => {
+  const contactId = parseInt(req.params.contactId);
+  const favorite = favorites.find(favorite => favorite.contactId === contactId);
+
+  if (favorite) {
+    res.json(favorite);
+  } else {
+    res.status(404).json({ message: 'Favorite not found' });
+  }
+});
+
+// GET favorite by name
+app.get('/favorites/name/:name', (req, res) => {
+  const name = req.params.name;
+  const favorite = favorites.find(favorite => favorite.name === name);
+
+  if (favorite) {
+    res.json(favorite);
+  } else {
+    res.status(404).json({ message: 'Favorite not found' });
+  }
+});
+
+// POST favorite (add contact to favorites)
+app.post('/favorites', (req, res) => {
+  const { contactId, name } = req.body;
+  const favoriteContact = { contactId, name };
+
+  favorites.push(favoriteContact);
+
+  res.status(201).json({ message: 'Favorite added successfully', favoriteContact });
+});
+
+// PATCH (update favorites name)
+app.patch('/favorites/:contactId', (req, res) => {
+  const contactId = parseInt(req.params.contactId);
+  const { name } = req.body;
+  const favoriteContact = favorites.find(favorite => favorite.contactId === contactId);
+
+  if (favoriteContact) {
+    favoriteContact.name = name;
+    res.json({ message: 'Favorite name updated successfully', favoriteContact });
+  } else {
+    res.status(404).json({ message: 'Favorite not found' });
+  }
+});
+
+// PUT (replace favorite)
+app.put('/favorites/:contactId', (req, res) => {
+  const contactId = parseInt(req.params.contactId);
+  const { name } = req.body;
+  const favoriteIndex = favorites.findIndex(favorite => favorite.contactId === contactId);
+
+  if (favoriteIndex !== -1) {
+    favorites[favoriteIndex] = { contactId, name };
+    res.json({ message: 'Favorite replaced successfully', favorite: favorites[favoriteIndex] });
+  } else {
+    res.status(404).json({ message: 'Favorite not found' });
+  }
+});
+
+// DELETE favorite
+app.delete('/favorites/:contactId', (req, res) => {
+  const contactId = parseInt(req.params.contactId);
+  const favoriteIndex = favorites.findIndex(favorite => favorite.contactId === contactId);
+
+  if (favoriteIndex !== -1) {
+    favorites.splice(favoriteIndex, 1);
+    res.json({ message: 'Favorite deleted successfully' });
+  } else {
+    res.status(404).json({ message: 'Favorite not found' });
   }
 });
 
